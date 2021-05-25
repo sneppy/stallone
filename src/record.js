@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex'
-import { markRaw } from './vue'
+import { markRaw, reactive } from './vue'
 
 /**
  * A class that manages the data of an API
@@ -30,6 +30,9 @@ export class Record {
 
 		/** Mutex used to prevent multiple updates */
 		this._lock = markRaw(new Mutex())
+
+		// Make reactive
+		return reactive(this)
 	}
 
 	/**

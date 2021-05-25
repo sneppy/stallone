@@ -8,7 +8,7 @@ import { reactive } from './vue'
 export const InlineStore = ({ h = identity } = {}) => {
 
 	/** The object used to store records */
-	let records = reactive({})
+	let records = {}
 
 	/**
 	 * Fetch a record using the key
