@@ -120,7 +120,7 @@ export const Model = (api) => {
 					let [ data, status ] = await req(patches)
 
 					// Update data
-					rec.data = data
+					Object.assign(rec.data, data)
 					rec.status = status
 				})
 
