@@ -181,6 +181,9 @@ export const Model = (api) => {
 
 			// Get existing or create a new one
 			let record = api.store.get(path) || api.store.set(path, new Record())
+			let entity = new this(record)
+
+			// Fetch record data
 			record.updateAsync(async (rec) => {
 
 				// Send request to server
@@ -190,10 +193,13 @@ export const Model = (api) => {
 				// Set data and status
 				rec.data = data
 				rec.status = status
+			}).then(() => {
+
+				// Store record
+				api.store.set(entity._path, record)
 			})
 
-			// Create new entity from record
-			return new this(record)
+			return entity
 		}
 	}
 }
