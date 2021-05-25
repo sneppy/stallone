@@ -1,0 +1,22 @@
+{
+	"User": {
+		"username": "string",
+		"email": "string",
+		"name": "string",
+		"posts": "Post[]"
+	},
+	"Post": {
+		"author": "User",
+		"title": "string",
+		"views": "int",
+		"published": "boolean",
+		"comments": "Comment[]",
+		"createdAt": "date",
+		"updatedAt": "date"
+	},
+	"Comment": {
+		"author": "User",
+		"post": "Comment",
+		"body": "string"
+	}
+}
