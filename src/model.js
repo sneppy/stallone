@@ -234,5 +234,22 @@ export const Model = (api) => {
 
 			return entity
 		}
+
+		/**
+		 * Static method used to delete an entity
+		 * identified by one or more keys
+		 * 
+		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
+		 * @return {Promise} a promise that resolves when entity is deleted
+		 */
+		static async delete(...keys) {
+
+			// Get delete path
+			let path = this._path(keys)
+
+			// Attempt to delete the entity
+			let req = api.Request('DELETE', path)
+			return await req()
+		}
 	}
 }
