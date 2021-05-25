@@ -19,7 +19,7 @@ export const InlineStore = ({ h = identity } = {}) => {
 	const get = (key) => {
 
 		let m = h(key)
-		return records[h]
+		return records[m]
 	}
 
 	/**
