@@ -14,9 +14,19 @@ let api = new Stallone({
 
 class User extends api.Model {}
 
-let user = User.get('sneppy13')
-user.wait().then((u) => {
+let App = Vue.defineComponent({
+	template: `<div>
+		<h1>Hello, {{ me.username || me.nickname }}!</h1>
+		<p>email: {{ me.email }}</p>
+	</div>`,
 
-	u.bio = 'Software engineer by day, software engineer by night'
-	u.patch().then(() => console.log('patched'))
+	setup() {
+
+		let me = User.get('me')
+		Vue.watchEffect(() => console.log(me.username || me.nickname))
+
+		return { me }
+	}
 })
+
+Vue.createApp(App).mount('#App')
