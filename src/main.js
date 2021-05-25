@@ -16,6 +16,9 @@ let App = Vue.defineComponent({
 		<p>Vue will react when user is created</p>
 		<h1>Hello, {{ me.username || me.nickname }}@{{ me._path }}!</h1>
 		<p>email: {{ me.email }}</p>
+
+		<p>record data: {{ me._data }}</p>
+		<p>record timestamp: {{ me._record._updatedAt }}</p>
 	</div>`,
 
 	setup() {
@@ -24,7 +27,6 @@ let App = Vue.defineComponent({
 			username: 'sneppy',
 			email: 'sneppy@google.com'
 		})
-		me.wait().then((u) => console.log(User.get(u.id).username))
 
 		return { me }
 	}

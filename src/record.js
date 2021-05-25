@@ -88,10 +88,11 @@ export class Record {
 		try
 		{
 			// Do the update
-			await doUpdate(this)
+			let event = await doUpdate(this) || null
+			this._updatedAt = markRaw(new Date())
 
 			// Notify listeners
-			this._notifyAll()
+			this._notifyAll(event)
 		}
 		catch (err)
 		{
@@ -120,9 +121,11 @@ export class Record {
 
 	/**
 	 * Called to notify all listeners about an update
+	 * 
+	 * @param {string} event the type of update
 	 */
-	_notifyAll(/* event */) {
+	_notifyAll(event) {
 
-		this._listeners = this._listeners.filter((notify) => notify(this))
+		this._listeners = this._listeners.filter((notify) => notify(this, event))
 	}
 }

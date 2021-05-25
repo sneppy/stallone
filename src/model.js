@@ -126,7 +126,30 @@ export const Model = (api) => {
 
 				// Then clear patches
 				this._record.clearPatches()
+
+				return 'update'
 			}
+
+			return this
+		}
+
+		/**
+		 * Delete this entity
+		 */
+		async delete() {
+			
+			await this._record.updateAsync(async (rec) => {
+
+				// Send delete request
+				let req = api.Request('DELETE', this._path)
+				let [ data, status ] = await req()
+
+				// Reset data
+				rec.data = data
+				rec.status = status
+
+				return 'delete'
+			})
 
 			return this
 		}
@@ -135,20 +158,25 @@ export const Model = (api) => {
 		 * Return a promise that resolves successfully
 		 * when the object is updated with a 2xx or 3xx
 		 * HTTP status
+		 * 
+		 * @param {string|null} event the type of the event to listen for
 		 */
-		wait() {
+		wait(event = null) {
 
 			return new Promise((resolve, reject) => {
 
-				this._record.listen((rec) => {
+				this._record.listen((rec, ev) => {
 
-					if (rec.status >= 200 && rec.status < 400)
+					if (!event || event === ev)
 					{
-						resolve(this)
-					}
-					else 
-					{
-						reject(this)
+						if (rec.status >= 200 && rec.status < 400)
+						{
+							resolve(this)
+						}
+						else 
+						{
+							reject(this)
+						}
 					}
 
 					return true
@@ -196,6 +224,8 @@ export const Model = (api) => {
 
 				// Store record
 				api.store.set(entity._path, record)
+				
+				return 'read'
 			})
 
 			return entity
@@ -230,6 +260,8 @@ export const Model = (api) => {
 
 				// If update is successful, store record
 				api.store.set(entity._path, record)
+
+				return 'create'
 			})
 
 			return entity
