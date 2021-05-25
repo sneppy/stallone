@@ -193,9 +193,42 @@ export const Model = (api) => {
 				// Set data and status
 				rec.data = data
 				rec.status = status
-			}).then(() => {
 
 				// Store record
+				api.store.set(entity._path, record)
+			})
+
+			return entity
+		}
+
+		/**
+		 * Create a new entity of this type
+		 * 
+		 * @param {*} data entity creation data
+		 * @return {Model}
+		 */
+		static create(data) {
+
+			// Get creation path
+			// TODO: Have it separate?
+			let path = this._path([])
+
+			// Create record and entity
+			let record = new Record()
+			let entity = new this(record)
+			
+			// Update record, then store entity
+			record.updateAsync(async (rec) => {
+
+				// Send request to server
+				let req = api.Request('POST', path)
+				let [ data_, status ] = await req(data)
+
+				// Set data and status
+				rec.data = data_
+				rec.status = status
+
+				// If update is successful, store record
 				api.store.set(entity._path, record)
 			})
 
