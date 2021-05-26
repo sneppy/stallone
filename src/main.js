@@ -4,19 +4,33 @@ let mock = new Stallone({
 	baseURL: 'https://jsonplaceholder.typicode.com'
 })
 
-class User extends mock.Model {
-	static _path(keys) {
+export class User extends mock.Model {
+	static _dirname = 'users'
+}
 
-		return '/' + ['users', ...keys].join('/')
+export class Post extends mock.Model {
+	static _dirname = 'posts'
+	
+	get author() {
+
+		return User.get(this._data.userId)
 	}
 }
 
-class Post extends mock.Model {
-	static userId = User
+export class Comment extends mock.Model {
+	static dirname = 'comments'
 
-	static _path(keys) {
+	get author() {
 
-		return '/' + ['posts', ...keys].join('/')
+		// TODO: Just a proposal
+		return User.where({
+			email: this._data.email
+		}).first()
+	}
+
+	get post() {
+
+		return Post.get(this._data.postId)
 	}
 }
 
@@ -36,7 +50,7 @@ let App = Vue.defineComponent({
 
 		<h2>{{ post.title }}</h2>
 		
-		<p>Post #{{ post.id }}, created by {{ post.userId.username }}</p>
+		<p>Post #{{ post.id }}@{{ post._path }}, created by {{ post.id && post.userId.username }}</p>
 
 		<pre v-html="post.body"></pre>
 	</div>`,

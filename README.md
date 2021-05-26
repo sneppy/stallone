@@ -118,14 +118,14 @@ An entity can be deleted using either the static method `Model.delete(...keys)` 
 ```javascript
 Post.delete('my-first-post') // DELETE https://localhost:8080/api/post/my-first-post
 // or
-Post.get('my-first-post').wait().then((p) => p.delete()) // DELETE https://localhost:8080/api/post/<post.id>
+Post.get('my-first-post').wait().then((p) => p.delete()) // DELETE https://localhost:8080/api/post/<post._pk>
 ```
 
 The former sends a single `DELETE` request using the provided key; the latter is recommended if the entity is already loaded.
 
-Note that in the second case, the request is potentially sent to a different endpoint. By default, Stallone associates each entity with a relative endpoint, equal to `<lowercase classname>/<'id' property of the entity>`.
+Note that in the second case, the request is potentially sent to a different endpoint. By default, Stallone associates each entity with a relative endpoint, equal to `<lowercase classname>/<primary key of the entity>`.
 
-This default behavior can be changed by overriding the instance getter `Model._path` (not to be confused with the static method), as explained later.
+This default behavior can be changed by overriding the instance getters `Model._pk` and `Model._path` (not to be confused with the static method), as explained later.
 
 Unlike `get` and `create`, both forms of `delete` return a `Promise` that resolves when the entity is deleted:
 
@@ -144,7 +144,7 @@ Updating an entity in Stallone is as simple as changing the local entity and the
 ```javascript
 user.username = 'stallion'
 user.email = 'stallion@sneppy.com'
-user.patch() // PATCH https://localhost:8080/api/user/<user.id> {username: 'stallion', email: 'stallion@sneppy.com'}
+user.patch() // PATCH https://localhost:8080/api/user/<user._pk> {username: 'stallion', email: 'stallion@sneppy.com'}
 ```
 
 Stallone is smart enough to figure out what properties were modified and send a `PATCH` request with those changes. The server should send back any property that has been further modified by the request, though in general it can simply send back the data of the entity.
@@ -181,9 +181,20 @@ class UserRelationship extends api.Model {
 UserRelationship.get(1, 4) // GET /user/1/relationship/4
 ```
 
-However, since `_path` is also called without arguments when creating an entity, you would get an error when calling `UserRelationship.create()`.
+> Note that since `_path` is also called without arguments when creating an entity, you would get an error when calling `UserRelationship.create()`.
 
-You would also need to override the instance getter `Model._path` which is used when patching or deleting the entity:
+In most cases you can simply override the static getter `_dirname`, which by default returns the lowercase name of the model:
+
+```javascript
+class User extends api.Model {
+	static _dirname() {
+
+		return 'users'
+	}
+}
+```
+
+Sometimes you also need to override the instance getter `Model._path` which is used when patching or deleting the entity:
 
 ```javascript
 class UserRelationship extends api.Model {
@@ -198,6 +209,24 @@ class UserRelationship extends api.Model {
 	}
 }
 ```
+
+Since the base version of `_path` simply calls `_path(this._pk)`, usually you can get away by simply override `_pk`, which returns the primary key of the entity:
+
+```javascript
+class UserRelationship extends api.Model {
+	get _pk_() {
+
+		// Return an array with the sender and recipient keys
+	}
+
+	static _path([ sender, recipient ]) {
+		
+		return `user/${sender}/relationship/${recipient}`
+	}
+}
+```
+
+> The default value of `_pk` is equal to the `'id'` property of the entity, if any.
 
 Any property defined on the instance as a higher priority than the same property in the record data. For instance, you may want to return a default profile picture if the user doesn't have any:
 
@@ -321,3 +350,47 @@ In addition, changes will be reflected on all entities that share the same recor
 Stallone detects automatically if Vue is installed. In the future it may be possible to explicitly disable this feature.
 
 > When including Stallone directly with a script tag, make sure it is included after Vue
+
+# Example API
+
+In this section I will show a simple Stallone setup.
+
+[Here](https://jsonplaceholder.typicode.com/) you can find the fake API used for this example.
+
+```javascript
+import { Stallone } from '@sneppy/stallone'
+
+export let api = new Stallone({
+	baseURL: 'https://jsonplaceholder.typicode.com/'
+})
+
+export class User extends api.Model {
+	static _dirname = 'users'
+}
+
+export class Post extends api.Model {
+	static _dirname = 'posts'
+	
+	get author() {
+
+		return User.get(this._data.userId)
+	}
+}
+
+export class Comment extends api.Model {
+	static dirname = 'comments'
+
+	get author() {
+
+		// TODO: Just a proposal
+		return User.where({
+			email: this._data.email
+		}).first()
+	}
+
+	get post() {
+
+		return Post.get(this._data.postId)
+	}
+}
+```

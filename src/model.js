@@ -10,6 +10,26 @@ import { arrify, getPropertyDescriptor, isEmpty } from './util'
 export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 
 	/**
+	 * 
+	 */
+	const inlineEntities = (data) => {
+
+		for (let prop in data)
+		{
+			if (data[prop] instanceof Model)
+			{
+				// Replace with its primary key
+				data[prop] = data[prop]._pk
+			}
+			
+			// Inline nested entities?
+		}
+
+		// Return modified data
+		return data
+	}
+
+	/**
 	 * Return the actual class
 	 */
 	return class Model {
@@ -112,13 +132,24 @@ export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 		}
 
 		/**
+		 * Return the primary key of the entity.
+		 * Defaults to its id property
+		 * 
+		 * @return {Array}
+		 */
+		get _pk() {
+
+			return arrify(this.id)
+		}
+
+		/**
 		 * Return the URI at which to fetch,
 		 * update or delete this entity
 		 */
 		get _path() {
 
 			// Use id property
-			return this.constructor._path([this.id])
+			return this.constructor._path(this._pk)
 		}
 
 		/**
@@ -136,7 +167,7 @@ export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 
 					// Send patch request
 					let req = api.Request('PATCH', this._path)
-					let [ data, status ] = await req(patches)
+					let [ data, status ] = await req(inlineEntities(patches))
 
 					// Update data
 					Object.assign(rec.data, data)
@@ -204,6 +235,14 @@ export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 		}
 
 		/**
+		 * The name used in the relative path.
+		 */
+		static get _dirname() {
+
+			return this.name.toLowerCase()
+		}
+
+		/**
 		 * Return the URI at which to find an entity
 		 * of this type identified by a composite key
 		 * 
@@ -211,7 +250,7 @@ export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 		 */
 		static _path(keys) {
 
-			return '/' + [this.name.toLowerCase(), ...keys].join('/')
+			return '/' + [this._dirname, ...keys].join('/')
 		}
 
 		/**
@@ -275,7 +314,7 @@ export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 
 				// Send request to server
 				let req = api.Request('POST', path)
-				let [ data_, status ] = await req(data)
+				let [ data_, status ] = await req(inlineEntities(data))
 
 				// Set data and status
 				rec.data = data_
