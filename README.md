@@ -125,7 +125,7 @@ The former sends a single `DELETE` request using the provided key; the latter is
 
 Note that in the second case, the request is potentially sent to a different endpoint. By default, Stallone associates each entity with a relative endpoint, equal to `<lowercase classname>/<'id' property of the entity>`.
 
-This default behavior can be changed by overriding the instance `Model._path()` method (not to be confused with the static method), as explained later.
+This default behavior can be changed by overriding the instance getter `Model._path` (not to be confused with the static method), as explained later.
 
 Unlike `get` and `create`, both forms of `delete` return a `Promise` that resolves when the entity is deleted:
 
@@ -152,6 +152,134 @@ Stallone is smart enough to figure out what properties were modified and send a 
 Like `delete`, it returns a `Promise` that resolves when the request has finished.
 
 > Note that, due to the architecture of Stallone, the local changes made to an entity are immediately reflected on all other entities that share the same record.
+
+Customizing models
+------------------
+
+Though Stallone requires the backend to adopt to a certain structure, it is also flexible enough to conform to the backend.
+
+The first property you may wish to change is the path used to fetch and create entities.
+
+The default path is `/<lowercase name of the model>/key0/key1/.../keyN`:
+
+```javascript
+User.get(1) // Get /user/1
+Post.get('my-first-post') // GET /post/my-first-post
+UserRelationship.get(1, 4) // GET /userrelationship/1/4
+```
+
+For instance, say that the endpoint to fetch the relationship between two users has the form `/user/1/relationship/4`. Then we would need to change the default behavior of `UserRelationship` like this:
+
+```javascript
+class UserRelationship extends api.Model {
+	static _path([ sender, recipient ]) {
+		
+		return `user/${sender}/relationship/${recipient}`
+	}
+}
+
+UserRelationship.get(1, 4) // GET /user/1/relationship/4
+```
+
+However, since `_path` is also called without arguments when creating an entity, you would get an error when calling `UserRelationship.create()`.
+
+You would also need to override the instance getter `Model._path` which is used when patching or deleting the entity:
+
+```javascript
+class UserRelationship extends api.Model {
+	get _path() {
+
+		// Use the entity properties to return the appropriate path
+	}
+
+	static _path([ sender, recipient ]) {
+		
+		return `user/${sender}/relationship/${recipient}`
+	}
+}
+```
+
+Any property defined on the instance as a higher priority than the same property in the record data. For instance, you may want to return a default profile picture if the user doesn't have any:
+
+```javascript
+class User extends api.Model {
+	get picture() {
+
+		if (this._data && this._data.picture)
+		{
+			return this._data.picture
+		}
+		else
+		{
+			return 'default-image-uri'
+		}
+	}
+}
+```
+
+There are a few reserved property defined on the entity:
+
+- `_model` refers to the class and may be used to access its static methods;
+- `_record` refers to the record object, and it is mainly used internally;
+- `_data` refers directly to the record's data.
+
+You may also define custom setters:
+
+```javascript
+class User extends api.Model {
+	set username(value) {
+
+		this._record.patch({
+			username: value.trim().toLowerCase()
+		})
+	}
+}
+```
+
+It is important that you call `Record.patch(patches)`, otherwise the change will not be accounted for when calling `patch`. Not doing so may be useful to prevent some properties from being uploaded when patching an entity.
+
+A setter or method may also patch multiple properties:
+
+```javascript
+class User extends api.Model {
+	get name() {
+
+		return [this.first_name, this.last_name].join(' ')
+	}
+
+	setName(value) {
+
+		let name = value.split(' ')
+		this._record.patch({
+			first_name: name[0],
+			last_name: name.shift().join(' ')
+		})
+	}
+}
+
+User.get(11).wait().then((u) => u.setName('Sylvester Stallone'))
+```
+
+If you want to fetch another entity, you can use the following syntax:
+
+```javascript
+class Post extends api.Model {
+	static author = User
+}
+```
+
+Which is equivalent to:
+
+```javascript
+class Post extends api.Model {
+	get author() {
+
+		return User.get(...arrify(this._data.author))
+	}
+}
+```
+
+This method expects the entity to have a property with the same name (e.g. `author`) and will use that property to fetch the other entity. The property may also be a composite key (hence the `arrify` call, which wraps a non-array value in an array).
 
 Vue integration
 ---------------

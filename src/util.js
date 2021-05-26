@@ -15,6 +15,9 @@ export const isEmpty = (x) => {
 	return true
 }
 
+/** Merge all arguments in a flat array */
+export const arrify = (...args) => [].concat.apply([], args)
+
 /**
  * Get the closest property descriptor along
  * the prototype chain. Returns undefined if

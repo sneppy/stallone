@@ -20,7 +20,7 @@ export class Record {
 		this.status = 0
 
 		/** Record update timestamp */
-		this._updatedAt = markRaw(new Date())
+		this.updatedAt = null
 
 		/** Set of properties patched */
 		this._patches = markRaw(new Set())
@@ -87,12 +87,16 @@ export class Record {
 
 		try
 		{
-			// Do the update
-			let event = await doUpdate(this) || null
-			this._updatedAt = markRaw(new Date())
+			let event
 
-			// Notify listeners
-			this._notifyAll(event)
+			if ((event = await doUpdate(this) || null))
+			{
+				// Update timestamp
+				this.updatedAt = Date.now()
+
+				// Notify listeners
+				this._notifyAll(event)
+			}
 		}
 		catch (err)
 		{

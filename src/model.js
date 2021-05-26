@@ -1,5 +1,5 @@
 import { Record } from './record'
-import { getPropertyDescriptor, isEmpty } from './util'
+import { arrify, getPropertyDescriptor, isEmpty } from './util'
 
 /**
  * Return a Model class bound to
@@ -7,12 +7,15 @@ import { getPropertyDescriptor, isEmpty } from './util'
  * 
  * @param {Pony} api the api bound to the Model type
  */
-export const Model = (api) => {
+export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
 
 	/**
 	 * Return the actual class
 	 */
 	return class Model {
+		/** The maximum amount of time a record of this type is considered fresh */
+		static _maxAge = defaultMaxAge
+
 		/**
 		 * Construct a new entity
 		 * 
@@ -43,7 +46,23 @@ export const Model = (api) => {
 							
 							if (Reflect.has(ModelType, prop))
 							{
-								// TODO: Check property type
+								const RequiredType = Reflect.get(ModelType, prop)
+
+								if (RequiredType.prototype instanceof Model)
+								{
+									if (!record.data)
+									{
+										return null
+									}
+									
+									if (!(prop in record.data))
+									{
+										console.error(`'${prop}' is not a property of ${ModelType.name}`)
+									}
+
+									return RequiredType.get(...arrify(Reflect.get(record.data, prop)))
+								}
+								// TODO: Collections
 							}
 
 							if (Reflect.has(target, prop, receiver))
@@ -200,7 +219,6 @@ export const Model = (api) => {
 		 * one or more keys
 		 * 
 		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
-		 * @return {Model}
 		 */
 		static get(...keys) {
 
@@ -214,18 +232,24 @@ export const Model = (api) => {
 			// Fetch record data
 			record.updateAsync(async (rec) => {
 
-				// Send request to server
-				let req = api.Request('GET', path)
-				let [ data, status ] = await req()
+				if (!rec.updatedAt || !this._maxAge || Date.now() - rec.updatedAt > this._maxAge)
+				{
+					// Send request to server
+					let req = api.Request('GET', path)
+					let [ data, status ] = await req()
 
-				// Set data and status
-				rec.data = data
-				rec.status = status
+					// Set data and status
+					rec.data = data
+					rec.status = status
 
-				// Store record
-				api.store.set(entity._path, record)
-				
-				return 'read'
+					// Store record
+					api.store.set(entity._path, record)
+					
+					return 'read'
+				}
+
+				// Don't update
+				return false
 			})
 
 			return entity
@@ -235,7 +259,6 @@ export const Model = (api) => {
 		 * Create a new entity of this type
 		 * 
 		 * @param {*} data entity creation data
-		 * @return {Model}
 		 */
 		static create(data) {
 
