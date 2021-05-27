@@ -310,6 +310,92 @@ class Post extends api.Model {
 
 This method expects the entity to have a property with the same name (e.g. `author`) and will use that property to fetch the other entity. The property may also be a composite key (hence the `arrify` call, which wraps a non-array value in an array).
 
+Collections
+-----------
+
+Resources are usually tied together by a graph of relationships.
+
+For instance, a post belongs to one and only one user, whereas a user may have authored many posts.
+
+We use `Stallone.Collection(ModelType[, options])` to deal with [one-to-many](https://en.wikipedia.org/wiki/One-to-many_(data_model)) and [many-to-many](https://en.wikipedia.org/wiki/Many-to-many_(data_model)) relationships:
+
+```javascript
+class User extends api.Model {
+	get posts() {
+
+		return api.Collection(Post).in(this)
+	}
+}
+
+class Post extends api.Model {
+	static author = User
+}
+```
+
+The `Collection` class is merely a wrapper around a record and it is capable of iterating over a set of entities. Ideally, the server should send back a list of keys rather than the list of entities, so that Stallone can leverage the record system, but both are ok:
+
+```http
+GET /user/1/post
+----------------
+[1, 5, 2, 3]
+or
+[
+	{
+		id: 1,
+		...
+	},
+	{
+		id: 5,
+		...
+	},
+	...
+]
+```
+
+In both cases, you can iterate over the entities in a collection using the usual syntax:
+
+```javascript
+for (let post of user.posts)
+{
+	console.log(post.title)
+}
+```
+
+However, you may need to wait for the user, the collection and possibly the individual post entities to load before doing that. You can use `Collection.wait()` to wait for a collection to load:
+
+```javascript
+user.posts.wait().then((posts) => console.log([ ...posts ]))
+```
+
+While the collection is loading, it will behave as an empty array for the sake of iterating:
+
+```html
+<!-- This doesn't generate errors, as long as `user` is already loaded -->
+<div v-for="post in user.posts" :key"post.id">
+	<h2>{{ post.title }}</h2>
+</div>
+```
+
+Collections may also be used to handle other type of queries, like fetching all entities of a certain type or performing a search. To fetch an arbitrary collection use `Collection.get(path)`:
+
+```javascript
+let users = api.Collection(User).get(User._path()) // GET /user
+```
+
+You can read `Collection.length` to get the number of entities in a Collection:
+
+```html
+<p>There are {{ users.length }} total users</p>
+```
+
+While loading this property will return `null`.
+
+Finally, familiar methods, such as `forEach`, `map` and `reduce`, may also available:
+
+```javascript
+users.forEach((u) => console.log(u.username))
+```
+
 Vue integration
 ---------------
 

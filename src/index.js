@@ -1,5 +1,6 @@
 import { Request } from './request'
 import { Model } from './model'
+import { Collection } from './collection'
 import { InlineStore } from './store'
 import { noop } from './util'
 
@@ -28,5 +29,8 @@ export class Stallone {
 
 		/** The base class of all models */
 		this.Model = Model(this)
+
+		/** Returns a collection bound to a certain model */
+		this.Collection = Collection(this)
 	}
 }

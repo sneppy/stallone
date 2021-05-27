@@ -7,7 +7,7 @@ import { arrify, getPropertyDescriptor, isEmpty } from './util'
  * 
  * @param {Pony} api the api bound to the Model type
  */
-export const Model = (api, { defaultMaxAge = 60000 } = {}) => {
+export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
 	/**
 	 * 

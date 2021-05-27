@@ -1,4 +1,5 @@
 import { Stallone } from './'
+import { Collection } from './collection'
 
 let mock = new Stallone({
 	baseURL: 'https://jsonplaceholder.typicode.com'
@@ -15,10 +16,15 @@ export class Post extends mock.Model {
 
 		return User.get(this._data.userId)
 	}
+
+	get comments() {
+
+		return mock.Collection(Comment).get(this._path + '/comments')
+	}
 }
 
 export class Comment extends mock.Model {
-	static dirname = 'comments'
+	static _dirname = 'comments'
 
 	get author() {
 
@@ -53,6 +59,12 @@ let App = Vue.defineComponent({
 		<p>Post #{{ post.id }}@{{ post._path }}, created by {{ post.id && post.userId.username }}</p>
 
 		<pre v-html="post.body"></pre>
+
+		<p>There are {{ post.id && post.comments.length }} comments</p>
+
+		<div v-for="comment in post.comments" v-if="post.id">
+			<p>{{ comment.body }}</p>
+		</div>
 	</div>`,
 
 	setup() {
@@ -62,6 +74,8 @@ let App = Vue.defineComponent({
 			email: 'sneppy@google.com'
 		})
 		let post = Post.get(1)
+
+		post.wait().then((p) => p.comments.wait().then((comments) => console.log(comments.map((c) => c.body))))
 
 		const updateUser = () => me.patch()
 

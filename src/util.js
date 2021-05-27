@@ -15,6 +15,12 @@ export const isEmpty = (x) => {
 	return true
 }
 
+/** Returns true if is object */
+export const isObject = (obj) => obj === Object(obj)
+
+/** Returns true if object is iterable */
+export const isIterable = (obj) => obj != null && typeof obj[Symbol.iterator] === 'function'
+
 /** Merge all arguments in a flat array */
 export const arrify = (...args) => [].concat.apply([], args)
 
