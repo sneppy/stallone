@@ -12,7 +12,7 @@ export default {
   output: [
     {
       file: pkg.main,
-      name: 'Pony',
+      name: 'Stallone',
       format: 'umd',
       sourcemap: true
     },
