@@ -13,7 +13,7 @@ $ npm install --save @sneppy/stallone
 
 Or simply download and include it with a script tag:
 
-```
+```html
 <script src="https://unpkg.com/@sneppy/stallone"></script>
 ```
 
@@ -396,6 +396,78 @@ Finally, familiar methods, such as `forEach`, `map` and `reduce`, may also avail
 users.forEach((u) => console.log(u.username))
 ```
 
+Request authorization
+---------------------
+
+When creating a new instance of Stallone you may provide an authorization callback:
+
+```javascript
+let api = new Stallone({
+	baseURL: '...',
+	authorize: (req) => {}
+})
+```
+
+The callback receives the request object (which at the moment is a wrapper around an `XMLHttpRequest`).
+
+You can set an authorization header using `Request.header(name, value)`:
+
+```javascript
+let authorize = (req) => {
+
+	req.header('Authorization', accessToken)
+}
+```
+
+Or set a query parameter with `Request.query(query)`:
+
+```javascript
+let authorize = (req) => {
+
+	req.query({
+		token: accessToken
+	})
+}
+```
+
+Making custom requests
+----------------------
+
+You can use `api.Request` to create and dispatch requests using the above configuration (base URL + authorization callback):
+
+```javascript
+export const logout = return () => {
+
+	return api.Request('HEAD', '/logout')()
+}
+```
+
+First you need to create a request, providing the HTTP method and the path relative to the base URL. The returned object is a callable that returns a `Promise` itself, that resolves with the result of the request:
+
+```javascript
+// Example of a login method
+export const login = async (login, password) => {
+
+	let req = api.Request('POST', '/login')
+	let [ res, status ] = await req({ login, password })
+
+	let { access_token: accessToken } = res
+	window.localStorage.setItem('access_token', accessToken)
+}
+```
+
+You can set headers using `header` and query parameters using `query`, as explained before:
+
+```javascript
+let req = api.Request('POST', '/login').header('Content-Type', 'application/json; charset=UTF-8').query({
+	rememberme: true
+}).header('Something-Else', 'foobar')
+```
+
+When dispatching the request, any type of data not accepted by `XMLHttpRequest` will be converted to a JSON string.
+
+Stallone automatically decodes the response body using the `"Content-Type"` header, if present.
+
 Vue integration
 ---------------
 
@@ -437,46 +509,9 @@ Stallone detects automatically if Vue is installed. In the future it may be poss
 
 > When including Stallone directly with a script tag, make sure it is included after Vue
 
-# Example API
+Examples
+--------
 
-In this section I will show a simple Stallone setup.
+*Stallone + Vue*
 
-[Here](https://jsonplaceholder.typicode.com/) you can find the fake API used for this example.
-
-```javascript
-import { Stallone } from '@sneppy/stallone'
-
-export let api = new Stallone({
-	baseURL: 'https://jsonplaceholder.typicode.com/'
-})
-
-export class User extends api.Model {
-	static _dirname = 'users'
-}
-
-export class Post extends api.Model {
-	static _dirname = 'posts'
-	
-	get author() {
-
-		return User.get(this._data.userId)
-	}
-}
-
-export class Comment extends api.Model {
-	static dirname = 'comments'
-
-	get author() {
-
-		// TODO: Just a proposal
-		return User.where({
-			email: this._data.email
-		}).first()
-	}
-
-	get post() {
-
-		return Post.get(this._data.postId)
-	}
-}
-```
+- [Readonly blog](https://jsfiddle.net/ct2qb7hg/57/)
