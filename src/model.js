@@ -215,9 +215,16 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
 			return new Promise((resolve, reject) => {
 
+				// Data may be immdediately available, albeit not updated
+				let status = this._record.status
+				if (event === 'ready' && (status >= 200 && status < 400))
+				{
+					resolve(this)
+				}
+
 				this._record.listen((rec, ev) => {
 
-					if (!event || event === ev)
+					if (!event || event === 'ready' || event === ev)
 					{
 						if (rec.status >= 200 && rec.status < 400)
 						{

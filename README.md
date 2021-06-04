@@ -87,6 +87,8 @@ This method returns a JavaScript `Promise` that resolves whenever the entity rec
 User.get('sneppy').wait('read').then((u) => console.log(`Hello, ${u.username}!`))
 ```
 
+> Since `v1.0.0-beta.9` the `'ready'` event is also available. If the data is already available it resolves immediately.
+
 One nice feature of Stallone is that separate requests to the same resource share the same record. In fact, if you load the same user again the entity will be pre-filled with the data from the previous call:
 
 ```javascript
