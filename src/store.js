@@ -2,6 +2,22 @@ import { identity } from './util'
 import { reactive } from './vue'
 
 /**
+ * Return a new unique name for the store
+ * 
+ * @return {string}
+ */
+const getStoreUniqueName = () => {
+
+	let name = '$store'
+	let idx = 0
+	
+	// Get unique name
+	for (; name + idx in window; idx += 1);
+
+	return name + idx
+}
+
+/**
  * @param {Object} options
  * @param {Function} options.h a hash function used to hash the keys
  */
@@ -36,7 +52,11 @@ export const InlineStore = ({ h = identity } = {}) => {
 		return records[m]
 	}
 	
-	// TODO: Show store in debug
+	// TODO: Show store only in debug
+	if (true)
+	{
+		window[getStoreUniqueName()] = records
+	}
 
 	return { get, set }
 }

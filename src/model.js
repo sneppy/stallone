@@ -265,11 +265,13 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		 * one or more keys
 		 * 
 		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
+		 * @param {Object} options
+		 * @param {Boolean} options.forceUpdate
 		 */
-		static get(...keys) {
+		static get(keys, { forceUpdate } = {}) {
 
 			// Get path
-			let path = this._path(keys)
+			let path = this._path(arrify(keys))
 
 			// Get existing or create a new one
 			let record = api.store.get(path) || api.store.set(path, new Record())
@@ -278,7 +280,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 			// Fetch record data
 			record.updateAsync(async (rec) => {
 
-				if (!rec.updatedAt || !this._maxAge || Date.now() - rec.updatedAt > this._maxAge)
+				if (forceUpdate || !rec.updatedAt || !this._maxAge || Date.now() - rec.updatedAt > this._maxAge)
 				{
 					// Send request to server
 					let req = api.Request('GET', path)
@@ -343,10 +345,10 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
 		 * @return {Promise} a promise that resolves when entity is deleted
 		 */
-		static async delete(...keys) {
+		static async delete(keys) {
 
 			// Get delete path
-			let path = this._path(keys)
+			let path = this._path(arrify(keys))
 
 			// Attempt to delete the entity
 			let req = api.Request('DELETE', path)

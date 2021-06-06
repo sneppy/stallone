@@ -45,7 +45,7 @@ class Post extends api.Model {}
 
 All classes must extend `api.Model`.
 
-We can fetch an entity using `Model.get(...keys)`:
+We can fetch an entity using `Model.get(keys, options)`:
 
 ```javascript
 let user = User.get(2) // GET https://localhost:8080/api/user/2
@@ -68,7 +68,7 @@ Stallone expects the server to send back data of the entity. If the data is nest
 }
 ```
 
-The return value of `Model.get(...keys)` is an instance of that model, which we'll call entity. Once the entity data is loaded, we can access its properties using a familiar syntax:
+The return value of `Model.get(keys)` is an instance of that model, which we'll call entity. Once the entity data is loaded, we can access its properties using a familiar syntax:
 
 ```
 console.log(user.email)
@@ -115,7 +115,7 @@ Like before, the request is asynchronous and we may want to wait for it to finis
 post.wait('create').then((p) => console.log(`created post "${p.title}"`))
 ```
 
-An entity can be deleted using either the static method `Model.delete(...keys)` or the instance method `Model.delete()`:
+An entity can be deleted using either the static method `Model.delete(keys)` or the instance method `Model.delete()`:
 
 ```javascript
 Post.delete('my-first-post') // DELETE https://localhost:8080/api/post/my-first-post
