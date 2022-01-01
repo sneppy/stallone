@@ -1,5 +1,4 @@
 import { identity } from './util'
-import { reactive } from './vue'
 
 /**
  * Return a new unique name for the store

@@ -6,31 +6,22 @@ let markRaw = (x) => x
 
 try
 {
-	// Try and import Vue
-	({ markRaw, reactive } = require('vue'))
+	// Import vue dependencies
+	// TODO: A better way to force dynamic imports?
+	const pkgName = 'vue'
+	({ markRaw, reactive } = import(pkgName))
 }
 catch (err)
 {
-	if (err instanceof ReferenceError)
+	if (err instanceof ReferenceError && window.Vue)
 	{
-		// `require` is not defined
-		if (window.Vue)
-		{
-			// If Vue is defined globally
-			reactive = Vue.reactive
-			markRaw = Vue.markRaw
-		}
-		else
-		{
-			// Vue not defined globally
-			console.log('Vue not detected. Make sure to load Vue before Stallone')
-		}
+		markRaw = window.Vue.markRaw
+		reactive = window.Vue.reactive
 	}
 	else
 	{
-		// Vue dependency not found
-		console.log('Vue not detected')
+		console.warn('Vue not detected. Make sure to include Vue before Stallone.')
 	}
 }
 
-export { markRaw, reactive }
+export { reactive, markRaw }
