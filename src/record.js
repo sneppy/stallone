@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex'
-import { markRaw, reactive } from './vue'
+import { reactive, markRaw } from 'vue'
 
 /**
  * A class that manages the data of an API
@@ -7,7 +7,7 @@ import { markRaw, reactive } from './vue'
  */
 export class Record {
 	/**
-	 * Contruct a new record
+	 * Construct a new record
 	 * 
 	 * @param {*} data initial data
 	 */

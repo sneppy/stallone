@@ -475,6 +475,12 @@ Vue integration
 
 Stallone knows how to work with Vue.
 
+To enable the Vue integration, you need to change your import to:
+
+```javascript
+import { Stallone } from '@sneppy/stallone/vue'
+```
+
 All records are reactive, meaning that any change will immediately be reflected in the DOM:
 
 ```html

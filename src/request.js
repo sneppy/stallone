@@ -132,7 +132,10 @@ export const Request = ({ baseURL, authorize = null }) => {
 					if (xhr.readyState === xhr.DONE)
 					{
 						// Decode data
-						let res = decodeData(xhr.responseText, xhr.getResponseHeader('Content-Type'))
+						let res = null
+						if (method !== 'HEAD')
+							// Ignore response if method is HEAD
+							res = decodeData(xhr.responseText, xhr.getResponseHeader('Content-Type'))
 
 						if (xhr.status < 400)
 						{
@@ -151,7 +154,7 @@ export const Request = ({ baseURL, authorize = null }) => {
 		}
 
 		/** Set request header */
-		dispatcher.header = function (header, value) {
+		dispatcher.header = function (header, value = null) {
 
 			if (typeof name === 'string')
 			{
