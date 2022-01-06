@@ -1,6 +1,6 @@
 {
   "name": "@sneppy/stallone",
-  "version": "1.0.0-beta.11",
+  "version": "1.0.0-beta.12",
   "type": "module",
   "private": false,
   "description": "An elegant and intuitive library to create REST clients",
@@ -9,7 +9,8 @@
   "input": "src/index.js",
   "files": [
     "dist/*",
-    "src/*"
+    "src/*",
+    "vue/*"
   ],
   "scripts": {
     "dev": "npx wds",
@@ -45,7 +46,7 @@
     "@web/dev-server-rollup": "^0.3.13",
     "rollup": "^2.62.0",
     "typescript": "^4.5.4",
-    "vue": "^2.6.14"
+    "vue": "^3.2.26"
   },
   "dependencies": {
     "async-mutex": "^0.3.2"

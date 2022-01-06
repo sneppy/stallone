@@ -7,13 +7,13 @@ import pkg from './package.json'
 export default [{
   input: pkg.input,
   plugins: [
-    nodeResolve(),
     alias({
       entries: [{
         find: 'vue',
         replacement: path.resolve(__dirname, 'src/vue.js')
       }]
-    })
+    }),
+    nodeResolve()
   ],
   output: [{
       file: pkg.main,
