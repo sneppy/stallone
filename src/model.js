@@ -4,30 +4,10 @@ import { arrify, getPropertyDescriptor, isEmpty } from './util'
 /**
  * Return a Model class bound to
  * the given api
- * 
+ *
  * @param {Pony} api the api bound to the Model type
  */
 export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
-
-	/**
-	 * 
-	 */
-	const inlineEntities = (data) => {
-
-		for (let prop in data)
-		{
-			if (data[prop] instanceof Model)
-			{
-				// Replace with its primary key
-				data[prop] = data[prop]._pk
-			}
-			
-			// Inline nested entities?
-		}
-
-		// Return modified data
-		return data
-	}
 
 	/**
 	 * Return the actual class
@@ -38,7 +18,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
 		/**
 		 * Construct a new entity
-		 * 
+		 *
 		 * @param {Record} record the record associated with this entity
 		 */
 		constructor(record) {
@@ -63,7 +43,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 						default:
 						{
 							let desc
-							
+
 							if (Reflect.has(ModelType, prop))
 							{
 								const RequiredType = Reflect.get(ModelType, prop)
@@ -74,7 +54,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 									{
 										return null
 									}
-									
+
 									if (!(prop in record.data))
 									{
 										console.error(`'${prop}' is not a property of ${ModelType.name}`)
@@ -134,7 +114,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		/**
 		 * Return the primary key of the entity.
 		 * Defaults to its id property
-		 * 
+		 *
 		 * @return {Array}
 		 */
 		get _pk() {
@@ -153,6 +133,26 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		}
 
 		/**
+		 *
+		 */
+		_inlineEntities(data) {
+
+			for (let prop in data)
+			{
+				if (data[prop] instanceof this.constructor)
+				{
+					// Replace entity with its primary key
+					data[prop] = data[prop]._pk
+				}
+
+				// Inline nested entities?
+			}
+
+			// Return modified data
+			return data
+		}
+
+		/**
 		 * Commits changes made to the object by
 		 * sending a PATCH request to the entity's
 		 * URI with the object of patches
@@ -167,7 +167,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
 					// Send patch request
 					let req = api.Request('PATCH', this._path)
-					let [ data, status ] = await req(inlineEntities(patches))
+					let [ data, status ] = await req(this._inlineEntities(patches))
 
 					// Update data
 					Object.assign(rec.data, data)
@@ -187,7 +187,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		 * Delete this entity
 		 */
 		async delete() {
-			
+
 			await this._record.updateAsync(async (rec) => {
 
 				// Send delete request
@@ -208,7 +208,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		 * Return a promise that resolves successfully
 		 * when the object is updated with a 2xx or 3xx
 		 * HTTP status
-		 * 
+		 *
 		 * @param {string|null} event the type of the event to listen for
 		 */
 		wait(event = null) {
@@ -230,7 +230,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 						{
 							resolve(this)
 						}
-						else 
+						else
 						{
 							reject(this)
 						}
@@ -252,7 +252,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		/**
 		 * Return the URI at which to find an entity
 		 * of this type identified by a composite key
-		 * 
+		 *
 		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
 		 */
 		static _path(keys) {
@@ -263,7 +263,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		/**
 		 * Fetch an entity of this type identified by
 		 * one or more keys
-		 * 
+		 *
 		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
 		 * @param {Object} options
 		 * @param {Boolean} options.forceUpdate
@@ -292,7 +292,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
 					// Store record
 					api.store.set(entity._path, record)
-					
+
 					return 'read'
 				}
 
@@ -305,7 +305,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
 		/**
 		 * Create a new entity of this type
-		 * 
+		 *
 		 * @param {*} data entity creation data
 		 */
 		static create(data) {
@@ -317,13 +317,13 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 			// Create record and entity
 			let record = new Record()
 			let entity = new this(record)
-			
+
 			// Update record, then store entity
 			record.updateAsync(async (rec) => {
 
 				// Send request to server
 				let req = api.Request('POST', path)
-				let [ data_, status ] = await req(inlineEntities(data))
+				let [ data_, status ] = await req(this._inlineEntities(data))
 
 				// Set data and status
 				rec.data = data_
@@ -341,7 +341,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 		/**
 		 * Static method used to delete an entity
 		 * identified by one or more keys
-		 * 
+		 *
 		 * @param {Array} keys a list of keys that uniquely identify an entity of this type
 		 * @return {Promise} a promise that resolves when entity is deleted
 		 */

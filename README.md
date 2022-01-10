@@ -149,6 +149,9 @@ user.email = 'stallion@sneppy.com'
 user.patch() // PATCH https://localhost:8080/api/user/<user._pk> {username: 'stallion', email: 'stallion@sneppy.com'}
 ```
 
+> At the moment, Stallone only keeps track of property assignments, which means that if you change a mutable property (such as an array or an object), this property won't be updated when patching the entity.
+> This may change in the future. You can refer to this [Svelte tutorial](https://svelte.dev/tutorial/updating-arrays-and-objects) and to [this article](https://blog.agney.dev/immutable-array-operations/) for updating arrays and objects.
+
 Stallone is smart enough to figure out what properties were modified and send a `PATCH` request with those changes. The server should send back any property that has been further modified by the request, though in general it can simply send back the data of the entity.
 
 Like `delete`, it returns a `Promise` that resolves when the request has finished.

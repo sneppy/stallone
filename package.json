@@ -1,6 +1,6 @@
 {
   "name": "@sneppy/stallone",
-  "version": "1.0.0-beta.12",
+  "version": "1.0.0-beta.13",
   "type": "module",
   "private": false,
   "description": "An elegant and intuitive library to create REST clients",
