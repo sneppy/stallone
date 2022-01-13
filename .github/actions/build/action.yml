@@ -1,0 +1,24 @@
+name: Build library
+inputs:
+  node-version:
+    description: The version of Node.js to use
+    type: string
+    default: 16.x
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: https://registry.npmjs.org
+    - name: Install dependencies
+      run: |
+        node --version
+        npm --version
+        npm ci
+      shell: bash
+    - name: Build package
+      run: |
+        npm run build
+      shell: bash

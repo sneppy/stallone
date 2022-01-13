@@ -1,0 +1,41 @@
+name: Publish to npmjs
+on:
+  release:
+    types:
+      - published
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x, 16.x]
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          node-version: ${{ matrix.node-version }}
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.x
+          registry-url: https://registry.npmjs.org
+      - name: Install dependencies
+        run: |
+          node --version
+          npm --version
+          npm ci
+      - name: Publish
+        run: |
+          npm publish --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,6 +1,12 @@
 # Stallone
 
-> An elegant and intuitive library to create REST clients.
+[![npm version](https://badge.fury.io/js/@sneppy%2Fstallone.svg)](https://www.npmjs.com/package/@sneppy/stallone)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build](https://github.com/sneppy/stallone/actions/workflows/build.yml/badge.svg)](https://github.com/sneppy/stallone/actions/workflows/build.yml)
+
+An elegant and intuitive library to create REST clients.
+
+https://i.imgur.com/OnySz9Q.gif
 
 Installation
 ------------
@@ -17,13 +23,13 @@ Or simply download and include it with a script tag:
 <script src="https://unpkg.com/@sneppy/stallone"></script>
 ```
 
-> Stallone was designed to be used in a browser enviornment, and it uses `XMLHttpRequests` under the hood.
+> Stallone was designed to be used in a browser environment, and it uses `XMLHttpRequests` under the hood.
 > To use it in a Node environment you will need a third-party library such as [xhr2](https://www.npmjs.com/package/xhr2).
 
 Basic usage
 -----------
 
-First, create a new instance of `Stallone`:
+Create a new instance of `Stallone`:
 
 ```javascript
 import { Stallone } from '@sneppy/stallone'
@@ -520,9 +526,9 @@ Stallone detects automatically if Vue is installed. In the future it may be poss
 
 > When including Stallone directly with a script tag, make sure it is included after Vue
 
-Examples
---------
+---
 
-*Stallone + Vue*
+Check out other libraries:
 
-- [Readonly blog](https://jsfiddle.net/ct2qb7hg/57/)
+- [vue-pop](https://www.npmjs.com/package/@sneppy/vue-pop) is a Vue 3 plugin to manage pop-up windows and notifications.
+- [vue-menu](https://www.npmjs.com/package/@sneppy/vue-menu) is a Vue 3 plugin to create custom context menus.
