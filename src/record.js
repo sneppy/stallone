@@ -1,135 +1,119 @@
-import { Mutex } from 'async-mutex'
-import { reactive, markRaw } from 'vue'
+import { Mutex } from "async-mutex"
+import { reactive, markRaw } from "vue"
 
 /**
  * A class that manages the data of an API
  * resource
  */
 export class Record {
-	/**
-	 * Construct a new record
-	 * 
-	 * @param {*} data initial data
-	 */
-	constructor(data = null) {
+    /**
+     * Construct a new record
+     *
+     * @param {*} data initial data
+     */
+    constructor(data = null) {
+        /** Record data */
+        this.data = data
 
-		/** Record data */
-		this.data = data
+        /** Record HTTP status */
+        this.status = 0
 
-		/** Record HTTP status */
-		this.status = 0
+        /** Record update timestamp */
+        this.updatedAt = null
 
-		/** Record update timestamp */
-		this.updatedAt = null
+        /** Set of properties patched */
+        this._patches = markRaw(new Set())
 
-		/** Set of properties patched */
-		this._patches = markRaw(new Set())
+        /** List of listeners */
+        this._listeners = markRaw([])
 
-		/** List of listeners */
-		this._listeners = markRaw([])
+        /** Mutex used to prevent multiple updates */
+        this._lock = markRaw(new Mutex())
 
-		/** Mutex used to prevent multiple updates */
-		this._lock = markRaw(new Mutex())
+        // Make reactive
+        return reactive(this)
+    }
 
-		// Make reactive
-		return reactive(this)
-	}
+    /**
+     * Update the record data and keep
+     * note of which changes are made
+     *
+     * @param {Object} patches an object of prop-value pairs
+     */
+    patch(patches) {
+        for (let prop in patches) {
+            this.data[prop] = patches[prop]
+            this._patches.add(prop)
+        }
+    }
 
-	/**
-	 * Update the record data and keep
-	 * note of which changes are made
-	 * 
-	 * @param {Object} patches an object of prop-value pairs
-	 */
-	patch(patches) {
+    /**
+     * Return an object with all the patches
+     * prop-value pairs
+     */
+    getPatches() {
+        let patches = {}
+        for (let prop of this._patches.keys()) {
+            patches[prop] = this.data[prop]
+        }
 
-		for (let prop in patches)
-		{
-			this.data[prop] = patches[prop]
-			this._patches.add(prop)
-		}
-	}
+        return patches
+    }
 
-	/**
-	 * Return an object with all the patches
-	 * prop-value pairs
-	 */
-	getPatches() {
+    /**
+     * Called to clear all the patches
+     */
+    clearPatches() {
+        // Clear patches
+        this._patches.clear()
+    }
 
-		let patches = {}
-		for (let prop of this._patches.keys())
-		{
-			patches[prop] = this.data[prop]
-		}
+    /**
+     * Execute an update in exclusive mode
+     *
+     * @param {Function} doUpdate the actual update
+     * @return {this}
+     */
+    async updateAsync(doUpdate) {
+        // Acquire lock
+        let release = await this._lock.acquire()
+        try {
+            let event = (await doUpdate(this)) || null
+            if (event) {
+                // Update timestamp
+                this.updatedAt = Date.now()
+                // Notify listeners
+                this._notifyAll(event)
+            }
+        } catch (err) {
+            // TODO: Handle error
+            console.error(err)
+        } finally {
+            // Release lock
+            release()
+        }
 
-		return patches
-	}
+        return this
+    }
 
-	/**
-	 * Called to clear all the patches
-	 */
-	clearPatches() {
+    /**
+     * Register to the record update events
+     *
+     * @param {Function} notify event callback, return true to unregister
+     */
+    listen(notify) {
+        // Add to list of listeners
+        this._listeners.push(notify)
+    }
 
-		// Clear patches
-		this._patches.clear()
-	}
-
-	/**
-	 * Execute an update in exclusive mode
-	 * 
-	 * @param {Function} doUpdate the actual update
-	 * @return {this}
-	 */
-	async updateAsync(doUpdate) {
-
-		// Acquire lock
-		let release = await this._lock.acquire()
-
-		try
-		{
-			let event
-
-			if ((event = await doUpdate(this) || null))
-			{
-				// Update timestamp
-				this.updatedAt = Date.now()
-
-				// Notify listeners
-				this._notifyAll(event)
-			}
-		}
-		catch (err)
-		{
-			// TODO: Handle error
-			console.error(err)
-		}
-		finally
-		{
-			// Release lock
-			release()
-		}
-		
-		return this
-	}
-
-	/**
-	 * Register to the record update events
-	 * 
-	 * @param {Function} notify event callback, return true to unregister
-	 */
-	listen(notify) {
-
-		// Add to list of listeners
-		this._listeners.push(notify)
-	}
-
-	/**
-	 * Called to notify all listeners about an update
-	 * 
-	 * @param {string} event the type of update
-	 */
-	_notifyAll(event) {
-
-		this._listeners = this._listeners.filter((notify) => notify(this, event))
-	}
+    /**
+     * Called to notify all listeners about an update
+     *
+     * @param {string} event the type of update
+     */
+    _notifyAll(event) {
+        this._listeners = this._listeners.filter((notify) =>
+            notify(this, event),
+        )
+    }
 }
