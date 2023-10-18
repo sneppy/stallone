@@ -1,56 +1,36 @@
 import { identity } from "./util"
 
 /**
- * Return a new unique name for the store
- *
- * @return {string}
+ * @param {Object} config - Object to configure the store.
+ * @param {Function} config.hash - The hash function used to hash the record
+ *  keys.
  */
-const getStoreUniqueName = () => {
-    let name = "$store"
-    let idx = 0
-
-    // Get unique name
-    for (; name + idx in window; idx += 1);
-
-    return name + idx
-}
-
-/**
- * @param {Object} options
- * @param {Function} options.h a hash function used to hash the keys
- */
-export const InlineStore = ({ h = identity } = {}) => {
-    /** The object used to store records */
+export const InMemoryStore = ({ hash = identity } = {}) => {
+    /** The object used to store records. */
     let records = {}
 
     /**
-     * Fetch a record using the key
+     * Fetch a record using the key.
      *
-     * @param {*} key key that uniquely identifies a record
-     * @return {*}
+     * @param {*} key - The key that uniquely identifies the record.
+     * @return {*} The stored value.
      */
     const get = (key) => {
-        let m = h(key)
-        return records[m]
+        const h = hash(key)
+        return records[h]
     }
 
     /**
-     * Create or update a record
+     * Create or update a record.
      *
-     * @param {*} key a key that uniquely identifies a record
-     * @param {*} value the value of the record
-     * @param {*}
+     * @param {*} key - The key that uniquely identifies the record.
+     * @param {*} value - The value of the record.
+     * @return {*} The stored record.
      */
     const set = (key, value) => {
-        let m = h(key)
-        records[m] = value
-        return records[m]
-    }
-
-    // TODO: Show store only in debug
-    // eslint-disable-next-line no-constant-condition
-    if (true) {
-        window[getStoreUniqueName()] = records
+        let h = hash(key)
+        records[h] = value
+        return records[h]
     }
 
     return { get, set }

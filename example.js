@@ -73,7 +73,6 @@ let App = defineComponent({
             email: "sneppy@google.com",
         })
         let post = Post.get(1)
-        post.wait().then((p) => console.log(p._record))
         const updateUser = () => me.patch()
         return { me, post, updateUser }
     },

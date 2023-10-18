@@ -1,8 +1,7 @@
-import { Request } from "./request"
-import { Model } from "./model"
 import { Collection } from "./collection"
-import { InlineStore } from "./store"
-import { noop } from "./util"
+import { Model } from "./model"
+import { makeRequest } from "./request"
+import { InMemoryStore } from "./store"
 
 /**
  * An elegant and intuitive REST client.
@@ -11,25 +10,28 @@ export class Stallone {
     /**
      * Construct a new instance of Pony
      *
-     * @param {Object} config configuration object
-     * @param {string|URL} config.baseURL the base URL for all API endpoints
-     * @param {Function} config.authorize the base URL for all API endpoints
-     * @param {*} config.store a custom store to use
+     * @param {Object} config - Object used to configure the cient.
+     * @param {String|URL} config.baseURL - The base URL for all API endpoints.
+     *  Can be either a URL object, a absolute URL string or a relative path
+     *  (e.g. "api/v1").
+     * @param {Function|null} config.authorize - A callback used to authorize
+     *  HTTP requests. The callback receives an object that provides an
+     *  interface to define request headers. Can be `null`.
+     * @param {Object} config.store - An object used to store and cache API
+     *  records. Must provide a `set(key, value)` and `get(key)` endpoints.
      */
-    constructor({ baseURL, authorize = noop, store = InlineStore() }) {
-        /** Endpoints base URL */
+    constructor({ baseURL, authorize = null, store = InMemoryStore() }) {
+        /** Endpoints base URL. */
         this.baseURL = baseURL
-
-        /** Request dispatcher */
-        this.Request = Request({ baseURL, authorize })
-
-        /** Store used to store records */
+        /** Authorize callback. */
+        this.authorizeCb = authorize
+        /** Request dispatcher. */
+        this.Request = makeRequest(this)
+        /** Store used to store records. */
         this.store = store
-
-        /** The base class of all models */
+        /** The base class of all models. */
         this.Model = Model(this)
-
-        /** Returns a collection bound to a certain model */
+        /** Returns a collection bound to a certain model. */
         this.Collection = Collection(this)
     }
 }

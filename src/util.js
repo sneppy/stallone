@@ -1,6 +1,3 @@
-/** Callable that does nothing */
-export const noop = () => {}
-
 /** Callable that returns first argument as-is */
 export const identity = (x) => x
 

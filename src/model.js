@@ -2,33 +2,55 @@ import { Record } from "./record"
 import { arrify, getPropertyDescriptor, isEmpty } from "./util"
 
 /**
- * Return a Model class bound to
- * the given api
+ * Return a Model class bound to the given client.
  *
- * @param {Pony} api the api bound to the Model type
+ * @param {Stallone} api - the client to create a Model factory for.
  */
-export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
+export const makeModel = (api, { defaultMaxAge = 15000 } = {}) => {
     /**
-     * Return the actual class
+     * Iterate over the given object and replace any instance of Model with its
+     * primary key.
+     *
+     * @param {Object|Array} data - The data to inline.
+     * @param {boolean} shallow - If true, does not inline entities nested in
+     *  arrays or objects of the objects.
+     * @return {Object} The modified data.
      */
+    const inlineEntities = (data, shallow = false) => {
+        let data_ = { ...data }
+        for (let prop in data) {
+            if (data_[prop] instanceof api.Model) {
+                // Replace entity with its primary key
+                data_[prop] = data_[prop]._pk
+            } else if (shallow || data_[prop] === null) {
+                continue
+            } else if (typeof data_[prop] === "object") {
+                data_[prop] = inlineEntities(data_[prop], shallow)
+            }
+        }
+
+        // Return modified data
+        return data_
+    }
+
+    // Return the factory
     return class Model {
-        /** The maximum amount of time a record of this type is considered fresh */
+        /**
+         * The maximum amount of time a record of this type is considered
+         * fresh.
+         */
         static _maxAge = defaultMaxAge
 
         /**
-         * Construct a new entity
+         * Construct a new entity.
          *
-         * @param {Record} record the record associated with this entity
+         * @param {Record} record - The record associated with this entity
          */
         constructor(record) {
-            // The dynamic type of the model
+            // The runtime type of the model
             const ModelType = this.constructor
-
             // Return a proxy with custom getter and setter
             return new Proxy(this, {
-                /**
-                 * Custom setter
-                 */
                 get: (target, prop, receiver) => {
                     switch (prop) {
                         case "_model":
@@ -46,9 +68,10 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
                                     ModelType,
                                     prop,
                                 )
-
+                                // Entity contains a foreign key, resolve it to an actual entity
                                 if (RequiredType.prototype instanceof Model) {
                                     if (!record.data) {
+                                        // TODO: Null or empty entity?
                                         return null
                                     }
 
@@ -58,6 +81,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
                                         )
                                     }
 
+                                    // Fetch the entity
                                     return RequiredType.get(
                                         ...arrify(
                                             Reflect.get(record.data, prop),
@@ -68,30 +92,29 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
                             }
 
                             if (Reflect.has(target, prop, receiver)) {
+                                // Return method or getter of entity
                                 return Reflect.get(target, prop, receiver)
                             } else if (
                                 record.data &&
                                 Reflect.has(record.data, prop)
                             ) {
+                                // Return property of entity
                                 return Reflect.get(record.data, prop)
                             }
 
+                            // Property not found
                             return undefined
                     }
                 },
-
-                /**
-                 * Custom setter
-                 */
                 set: (target, prop, value, receiver) => {
                     switch (prop) {
                         default: {
                             let desc
-
                             if (
                                 (desc = getPropertyDescriptor(target, prop)) &&
                                 (desc.writable || desc.set)
                             ) {
+                                // Set a property of the entity class
                                 return Reflect.set(
                                     target,
                                     prop,
@@ -105,7 +128,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
                                 )) &&
                                 desc.writable
                             ) {
-                                // Set value on record
+                                // Set a property of the entity
                                 record.patch({
                                     [prop]: value,
                                 })
@@ -121,18 +144,21 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
         }
 
         /**
-         * Return the primary key of the entity.
-         * Defaults to its id property
+         * Return the primary key of the entity. Defaults to its id property.
          *
-         * @return {Array}
+         * @return {Array} The primary key of the entity.
          */
         get _pk() {
-            return arrify(this.id)
+            // Try some common names used for resource identifiers
+            return arrify(this.id || this.uid || this.uuid)
         }
 
         /**
-         * Return the URI at which to fetch,
-         * update or delete this entity
+         * Return the path at which to fetch, update or delete this entity.
+         *
+         * The path is always relative to the API base URL.
+         *
+         * @return {String} The path of the entity.
          */
         get _path() {
             // Use id property
@@ -140,37 +166,19 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
         }
 
         /**
+         * Commit changes made to the object by ending a PATCH request to the
+         * entity's URI.
          *
-         */
-        _inlineEntities(data) {
-            for (let prop in data) {
-                if (data[prop] instanceof this.constructor) {
-                    // Replace entity with its primary key
-                    data[prop] = data[prop]._pk
-                }
-
-                // TODO: Inline nested entities?
-            }
-
-            // Return modified data
-            return data
-        }
-
-        /**
-         * Commits changes made to the object by
-         * sending a PATCH request to the entity's
-         * URI with the object of patches
+         * @returns {Promise} A promise that resolves with the entity itself.
          */
         async patch() {
+            // Get the set of properties that changes and their current value
             const patches = this._record.getPatches()
-
             if (!isEmpty(patches)) {
                 await this._record.updateAsync(async (rec) => {
                     // Send patch request
                     let req = api.Request("PATCH", this._path)
-                    let [data, status] = await req(
-                        this._inlineEntities(patches),
-                    )
+                    let [data, status] = await req(inlineEntities(patches))
 
                     // Update data
                     Object.assign(rec.data, data)
@@ -179,15 +187,17 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
                 // Then clear patches
                 this._record.clearPatches()
-
                 return "update"
             }
-
             return this
         }
 
         /**
-         * Delete this entity
+         * Delete this entity.
+         *
+         * Sends a DELETE request to the API.
+         *
+         * @returns {Promise} A promise that resolves with the entity itself.
          */
         async delete() {
             await this._record.updateAsync(async (rec) => {
@@ -198,28 +208,35 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
                 // Reset data
                 rec.data = data
                 rec.status = status
-
                 return "delete"
             })
-
             return this
         }
 
         /**
-         * Return a promise that resolves successfully
-         * when the object is updated with a 2xx or 3xx
-         * HTTP status
+         * Return a promise that resolves successfully when the object is
+         * created, updated or deleted.
          *
-         * @param {string|null} event the type of the event to listen for
+         * @param {String|null} event the type of the event to listen for. If
+         *  `null`, subscribe to all events.
+         * @return {Promise} A promise that resolves with the entity when the
+         *  event is triggered.
          */
         wait(event = null) {
             return new Promise((resolve, reject) => {
-                // Data may be immdediately available, albeit not updated
+                // Data may be immdediately available
                 let status = this._record.status
-                if (event === "ready" && status >= 200 && status < 400) {
+                if (
+                    (event === "ready" || !event) &&
+                    status !== null &&
+                    status >= 200 &&
+                    status < 400
+                ) {
+                    // Resolve immediately
                     resolve(this)
                 }
 
+                // Subscribe to record events
                 this._record.listen((rec, ev) => {
                     if (!event || event === "ready" || event === ev) {
                         if (rec.status >= 200 && rec.status < 400) {
@@ -229,6 +246,7 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
                         }
                     }
 
+                    // Return true to pop event
                     return true
                 })
             })
@@ -236,38 +254,45 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
         /**
          * The name used in the relative path.
+         *
+         * By default, this is equal to the name of the class, lowercase. When
+         * the code is optimized the name of the class may be mangled, which
+         * might lead to unexpected behavior. Therefore, it's recommended that
+         * the user overrides this property.
          */
         static get _dirname() {
             return this.name.toLowerCase()
         }
 
         /**
-         * Return the URI at which to find an entity
-         * of this type identified by a composite key
+         * Return the path at which to find an entity of this type identified
+         * by a composite key.
          *
-         * @param {Array} keys a list of keys that uniquely identify an entity of this type
+         * The path is always relative to the API's base URL.
+         *
+         * @param {Array} keys - A list of keys that uniquely identify an entity
+         *  of this type.
+         * @returns {String} The path of the resource.
          */
         static _path(keys) {
             return "/" + [this._dirname, ...keys].join("/")
         }
 
         /**
-         * Fetch an entity of this type identified by
-         * one or more keys
+         * Fetch an entity of this type identified by the given key.
          *
-         * @param {Array} keys a list of keys that uniquely identify an entity of this type
-         * @param {Object} options
-         * @param {Boolean} options.forceUpdate
+         * @param {Array} key - A list of keys that uniquely identify an entity
+         *  of this type.
+         * @param {Object} options - Options applied to the fetch operation.
+         * @param {Boolean} options.forceUpdate - Force update of the resource.
          */
-        static get(keys, { forceUpdate } = {}) {
+        static get(key, { forceUpdate = false } = {}) {
             // Get path
-            let path = this._path(arrify(keys))
-
-            // Get existing or create a new one
+            const path = this._path(arrify(key || []))
+            // Get existing record or create a new one
             let record =
                 api.store.get(path) || api.store.set(path, new Record())
             let entity = new this(record)
-
             // Fetch record data
             record.updateAsync(async (rec) => {
                 if (
@@ -286,14 +311,12 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
                     // Store record
                     api.store.set(entity._path, record)
-
-                    return "read"
+                    return "ready"
                 }
 
                 // Don't update
                 return false
             })
-
             return entity
         }
 
@@ -305,16 +328,14 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
         static create(data) {
             // Get creation path
             const path = this._path([])
-
             // Create record and entity
             let record = new Record()
             let entity = new this(record)
-
             // Update record, then store entity
             record.updateAsync(async (rec) => {
                 // Send request to server
                 let req = api.Request("POST", path)
-                let [payload, status] = await req(entity._inlineEntities(data))
+                let [payload, status] = await req(inlineEntities(data))
 
                 // Set data and status
                 rec.data = payload
@@ -322,19 +343,17 @@ export const Model = (api, { defaultMaxAge = 15000 } = {}) => {
 
                 // If update is successful, store record
                 api.store.set(entity._path, record)
-
                 return "create"
             })
-
             return entity
         }
 
         /**
-         * Static method used to delete an entity
-         * identified by one or more keys
+         * Static method used to delete an entity identified by the given key.
          *
-         * @param {Array} keys a list of keys that uniquely identify an entity of this type
-         * @return {Promise} a promise that resolves when entity is deleted
+         * @param {Array} keys a list of keys that uniquely identify an entity
+         *  of this type.
+         * @return {Promise} a promise that resolves when entity is deleted.
          */
         static async delete(keys) {
             // Get delete path

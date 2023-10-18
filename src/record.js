@@ -2,14 +2,13 @@ import { Mutex } from "async-mutex"
 import { reactive, markRaw } from "vue"
 
 /**
- * A class that manages the data of an API
- * resource
+ * A class that manages the data of an API resource.
  */
 export class Record {
     /**
-     * Construct a new record
+     * Construct a new record.
      *
-     * @param {*} data initial data
+     * @param {*} data - Initial recor data, can be `null`.
      */
     constructor(data = null) {
         /** Record data */
@@ -35,10 +34,9 @@ export class Record {
     }
 
     /**
-     * Update the record data and keep
-     * note of which changes are made
+     * Update the record data and keep note of which changes are made.
      *
-     * @param {Object} patches an object of prop-value pairs
+     * @param {Object} patches - An object of prop-value pairs
      */
     patch(patches) {
         for (let prop in patches) {
@@ -48,8 +46,7 @@ export class Record {
     }
 
     /**
-     * Return an object with all the patches
-     * prop-value pairs
+     * Return an object with all the patches prop-value pairs.
      */
     getPatches() {
         let patches = {}
@@ -61,7 +58,7 @@ export class Record {
     }
 
     /**
-     * Called to clear all the patches
+     * Called to clear all the patches.
      */
     clearPatches() {
         // Clear patches
@@ -69,9 +66,9 @@ export class Record {
     }
 
     /**
-     * Execute an update in exclusive mode
+     * Execute an update in exclusive mode.
      *
-     * @param {Function} doUpdate the actual update
+     * @param {Function} doUpdate - The update callback
      * @return {this}
      */
     async updateAsync(doUpdate) {
@@ -107,9 +104,9 @@ export class Record {
     }
 
     /**
-     * Called to notify all listeners about an update
+     * Called to notify all listeners about an update.
      *
-     * @param {string} event the type of update
+     * @param {String} event - The type of the event.
      */
     _notifyAll(event) {
         this._listeners = this._listeners.filter((notify) =>

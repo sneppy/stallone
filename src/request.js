@@ -1,12 +1,26 @@
 /**
- * Set the appropriate "Content-Type" header
- * and jsonifie unsupported objects
+ * Join the given path and the base URL.
  *
- * @param {*} data any type of data to prepare
- * @param {Object} headers set of headers
- * @return {string|FormData|URLSearchParams|Blob|ArrayBuffer|Document} processed data
+ * @param {String} path - The path of the resource.
+ * @param {String|URL} base - The base URL.
+ * @return {String|URL} The resource URL.
  */
-const prepareData = (data, headers) => {
+function makeURL(path, base) {
+    if (base instanceof URL) {
+        return new URL(path, base)
+    } else {
+        return [base.replace(/\/+$/, ""), path.replace(/^\/+/, "")].join("/")
+    }
+}
+
+/**
+ * Set the appropriate "Content-Type" header and jsonify unsupported objects.
+ *
+ * @param {*} data - Any type of data to encode.
+ * @param {Object} headers - Mutable object that contains the request headers.
+ * @return {*} Encoded data.
+ */
+function encodeData(data, headers) {
     /** Set the content-type if not already set */
     const defaultContentType = (contentType) => {
         headers["Content-Type"] = headers["Content-Type"] || contentType
@@ -35,24 +49,24 @@ const prepareData = (data, headers) => {
 }
 
 /**
- * @param {string} data response text data
- * @param {string} contentType value of the "Content-Type" reseponse header
- * @return {string|Object} decoded data
+ * @param {String} payload - The raw payload of the response.
+ * @param {String} contentType - value of the "Content-Type" reseponse header,
+ *  if any.
+ * @return {String|Object} Decoded data.
  */
-const decodeData = (data, contentType) => {
+function decodeData(data, contentType) {
     if (!contentType) {
+        // Return data as-is
         console.warn("No 'Content-Type' response header found")
         return data
     }
 
     // Get media type string
     let [mediaType] = contentType.split(";")
-
     switch (mediaType) {
-        case "application/json": {
-            // TODO: Try-catch block here
+        case "application/json":
+            // TODO: Catch JSON parsing errors
             return JSON.parse(data)
-        }
 
         // Return as text and let user decode
         default:
@@ -61,74 +75,80 @@ const decodeData = (data, contentType) => {
 }
 
 /**
- * Create a new request factory
+ * Create a new request factory.
  *
- * @param {Object} config
- * @param {string|URL} config.baseURL the base URL
- * @param {Function} config.authorize a function used to authorize the request
+ * @param {Stallone} client - The client we are building the request for.
  */
-export const Request = ({ baseURL, authorize = null }) => {
+export const makeRequest = (client) => {
     /**
-     * Create a request and return a method
-     * to dispatch it
+     * Create a request and return a function to dispatch it.
      *
-     * @param {string} method valid HTTP method
-     * @param {string|URL} path path relative to the base URL
+     * @param {String} method - A valid HTTP method (e.g. "GET", "POST", etc.)
+     * @param {String} path - The Path of the resource (relative to the base
+     *  URL).
+     * @return {Function} A function to dispatch the request.
      */
     return function Request(method, path) {
+        // TODO: Check method is valid
         // Build URL string
-        let url = [baseURL, path].join("/").replaceAll(/\/+/g, "/")
+        let url = client.baseURL ? makeURL(path, client.baseURL) : path
         let headers = {}
 
         /**
-         * Send the request and return a promise
-         * that resolves with the response and the
-         * HTTP status
+         * Send the request and return a promise that resolves with the response
+         * and the HTTP status.
          *
-         * @param {*} data the data to send with the request
+         * @param {*} data - The data to send with the request. Can be `null`.
+         * @return {Promise} Promise that resolves with the response payload and
+         *  HTTP status.
          */
-        let dispatcher = (data) => {
-            /** The actual payload sent */
-            let payload = prepareData(data, headers)
+        const dispatch = (data) =>
+            new Promise((resolve, reject) => {
+                // Encode request payload now, this sets the correct headers as well
+                const payload = encodeData(data, headers)
 
-            return new Promise((resolve, reject) => {
-                // TODO: We can replace XHR maybe
-                // Create XHR
+                // Create HTTP request
                 let xhr = new XMLHttpRequest()
                 xhr.open(method, url)
-
-                // Set headers
                 for (let header in headers) {
+                    // Set headers
                     xhr.setRequestHeader(header, headers[header])
                 }
 
-                // Called when ready state changes
+                // Called when request state changes
                 xhr.onreadystatechange = () => {
                     if (xhr.readyState === xhr.DONE) {
-                        // Decode data
-                        let res = null
-                        if (method !== "HEAD")
+                        // Request is completed, get response payload
+                        let payload = null
+                        if (method !== "HEAD") {
                             // Ignore response if method is HEAD
-                            res = decodeData(
+                            payload = decodeData(
                                 xhr.responseText,
                                 xhr.getResponseHeader("Content-Type"),
                             )
+                        }
 
                         if (xhr.status < 400) {
-                            resolve([res, xhr.status])
+                            resolve([payload, xhr.status])
                         } else {
-                            reject([res, xhr.status])
+                            reject([payload, xhr.status])
                         }
                     }
                 }
 
-                // Send with data
+                // Encode the request payload and send
                 xhr.send(payload)
             })
-        }
 
-        /** Set request header */
-        dispatcher.header = function (header, value = null) {
+        /**
+         * Add or replace a request header.
+         *
+         * @param {String|Object} header - Name of the header or object that
+         *  contains multiple header definitions.
+         * @param {String|null} value - If `header` is a string must be the
+         *  value of the header.
+         */
+        dispatch.header = (header, value = null) => {
             if (typeof header === "string") {
                 // Append or replace single header
                 headers[header] = value
@@ -136,24 +156,13 @@ export const Request = ({ baseURL, authorize = null }) => {
                 // Append all headers
                 headers = { ...headers, ...header }
             }
-
-            return this
         }
 
-        /** Append to request URL query */
-        dispatcher.query = function (query) {
-            for (let name in query) {
-                url.searchParams.append(name, query[name])
-            }
-
-            return this
+        // If the client set a authorize callback, call it now
+        if (client.authorizeCb) {
+            client.authorizeCb(dispatch)
         }
 
-        if (authorize) {
-            // Authorize request
-            authorize(dispatcher)
-        }
-
-        return dispatcher
+        return dispatch
     }
 }
