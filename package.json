@@ -13,8 +13,8 @@
     "vue/*"
   ],
   "scripts": {
-    "dev": "npx wds",
-    "build": "npx rollup -c",
+    "dev": "wds",
+    "build": "rollup -c",
     "prepublishOnly": "npm run build",
     "lint": "eslint example.js src --ext .js --fix"
   },

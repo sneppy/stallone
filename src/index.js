@@ -1,5 +1,5 @@
 import { Collection } from "./collection"
-import { Model } from "./model"
+import { makeModel } from "./model"
 import { makeRequest } from "./request"
 import { InMemoryStore } from "./store"
 
@@ -30,7 +30,7 @@ export class Stallone {
         /** Store used to store records. */
         this.store = store
         /** The base class of all models. */
-        this.Model = Model(this)
+        this.Model = makeModel(this)
         /** Returns a collection bound to a certain model. */
         this.Collection = Collection(this)
     }

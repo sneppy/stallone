@@ -1,4 +1,4 @@
-import { Stallone } from "./vue"
+import { Stallone } from "./src"
 import {
     createApp,
     defineComponent,
