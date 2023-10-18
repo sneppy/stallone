@@ -128,8 +128,11 @@ export const makeRequest = (client) => {
                             )
                         }
 
-                        if (xhr.status < 400) {
+                        if (xhr.status < 300) {
                             resolve([payload, xhr.status])
+                        } else if (xhr.status < 400) {
+                            // TODO: Follow redirect
+                            reject([payload, xhr.status])
                         } else {
                             reject([payload, xhr.status])
                         }

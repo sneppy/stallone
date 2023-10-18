@@ -288,7 +288,7 @@ export const makeModel = (api, { defaultMaxAge = 15000 } = {}) => {
          */
         static get(key, { forceUpdate = false } = {}) {
             // Get path
-            const path = this._path(arrify(key || []))
+            const path = this._path(arrify(key))
             // Get existing record or create a new one
             let record =
                 api.store.get(path) || api.store.set(path, new Record())
